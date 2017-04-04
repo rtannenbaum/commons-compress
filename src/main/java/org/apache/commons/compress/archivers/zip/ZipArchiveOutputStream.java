@@ -249,6 +249,15 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
     private boolean fallbackToUTF8 = false;
 
     /**
+     * Whether to omit writing the central directory.
+     *
+     * <p>One use case for this is applications that write a zip in parallel as opposed to serial,
+     * and want to save the composition and writing of the central directory for later; after
+     * writing all of the file contents in parallel.
+     */
+    private boolean omitCentralDirectory = false;
+
+    /**
      * whether to create UnicodePathExtraField-s for each entry.
      */
     private UnicodeExtraFieldPolicy createUnicodeExtraFields = UnicodeExtraFieldPolicy.NEVER;
@@ -467,23 +476,30 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
         }
 
         cdOffset = streamCompressor.getTotalBytesWritten();
-        writeCentralDirectoryInChunks();
 
-        cdLength = streamCompressor.getTotalBytesWritten() - cdOffset;
-        writeZip64CentralDirectory();
-        writeCentralDirectoryEnd();
+        if (!omitCentralDirectory) {
+            writeCentralDirectory();
+        }
         offsets.clear();
         entries.clear();
         streamCompressor.close();
         finished = true;
     }
 
-    private void writeCentralDirectoryInChunks() throws IOException {
+    private void writeCentralDirectory() throws IOException {
+        writeCentralDirectoryInChunks(entries);
+
+        cdLength = streamCompressor.getTotalBytesWritten() - cdOffset;
+        writeZip64CentralDirectory();
+        writeCentralDirectoryEnd();
+    }
+
+    private void writeCentralDirectoryInChunks(List<ZipArchiveEntry> entries) throws IOException {
         final int NUM_PER_WRITE = 1000;
         final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(70 * NUM_PER_WRITE);
         int count = 0;
         for (final ZipArchiveEntry ze : entries) {
-            byteArrayOutputStream.write(createCentralFileHeader(ze));
+            writeCentralDirectoryChunk(byteArrayOutputStream, ze, offsets.get(ze));
             if (++count > NUM_PER_WRITE){
                 writeCounted(byteArrayOutputStream.toByteArray());
                 byteArrayOutputStream.reset();
@@ -491,6 +507,13 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
             }
         }
         writeCounted(byteArrayOutputStream.toByteArray());
+    }
+
+    public void writeCentralDirectoryChunk(
+        ByteArrayOutputStream byteArrayOutputStream,
+        ZipArchiveEntry ze,
+        long lfhOffset) throws IOException {
+        byteArrayOutputStream.write(createCentralFileHeader(ze, lfhOffset));
     }
 
     /**
@@ -1165,14 +1188,12 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
      * GByte and {@link Zip64Mode #setUseZip64} is {@link
      * Zip64Mode#Never}.
      */
-    protected void writeCentralFileHeader(final ZipArchiveEntry ze) throws IOException {
-        final byte[] centralFileHeader = createCentralFileHeader(ze);
+    protected void writeCentralFileHeader(final ZipArchiveEntry ze, long lfhOffset) throws IOException {
+        final byte[] centralFileHeader = createCentralFileHeader(ze, lfhOffset);
         writeCounted(centralFileHeader);
     }
 
-    private byte[] createCentralFileHeader(final ZipArchiveEntry ze) throws IOException {
-
-        final long lfhOffset = offsets.get(ze);
+    private byte[] createCentralFileHeader(final ZipArchiveEntry ze, long lfhOffset) throws IOException {
         final boolean needsZip64Extra = hasZip64Extra(ze)
                 || ze.getCompressedSize() >= ZIP64_MAGIC
                 || ze.getSize() >= ZIP64_MAGIC
