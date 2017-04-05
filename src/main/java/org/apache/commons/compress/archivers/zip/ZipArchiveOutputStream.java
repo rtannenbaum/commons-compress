@@ -250,10 +250,6 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
 
     /**
      * Whether to omit writing the central directory.
-     *
-     * <p>One use case for this is applications that write a zip in parallel as opposed to serial,
-     * and want to save the composition and writing of the central directory for later; after
-     * writing all of the file contents in parallel.
      */
     private boolean omitCentralDirectory = false;
 
@@ -408,6 +404,17 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
      */
     public void setFallbackToUTF8(final boolean b) {
         fallbackToUTF8 = b;
+    }
+
+    /**
+     * Whether to omit writing the central directory.
+     *
+     * <p>One use case for this is applications that write a zip in parallel as opposed to serial,
+     * and want to save the composition and writing of the central directory for later; after
+     * writing all of the file contents in parallel.</p>
+     */
+    public void setOmitCentralDirectory(final boolean o) {
+        omitCentralDirectory = o;
     }
 
     /**
