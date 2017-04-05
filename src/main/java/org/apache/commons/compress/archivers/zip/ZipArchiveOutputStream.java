@@ -1361,7 +1361,7 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
             throw new Zip64RequiredException(Zip64RequiredException.ARCHIVE_TOO_BIG_MESSAGE);
         }
 
-        byte[] num = ZipShort.getBytes(Math.min(numberOfEntries, ZIP64_MAGIC_SHORT));
+        final byte[] num = ZipShort.getBytes(Math.min(numberOfEntries, ZIP64_MAGIC_SHORT));
         writeCounted(num);
         writeCounted(num);
 
