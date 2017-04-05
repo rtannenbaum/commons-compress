@@ -498,7 +498,7 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
 
         cdLength = streamCompressor.getTotalBytesWritten() - cdOffset;
         writeZip64CentralDirectory();
-        writeCentralDirectoryEnd();
+        writeCentralDirectoryEnd(entries.size(), cdLength, cdOffset);
     }
 
     private void writeCentralDirectoryInChunks(List<ZipArchiveEntry> entries) throws IOException {
@@ -1345,27 +1345,26 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
      * GByte or there are more than 65535 entries inside the archive
      * and {@link Zip64Mode #setUseZip64} is {@link Zip64Mode#Never}.
      */
-    protected void writeCentralDirectoryEnd() throws IOException {
+    protected void writeCentralDirectoryEnd(int numberOfEntries, long cdLength, long cdOffset)
+        throws IOException {
         writeCounted(EOCD_SIG);
 
         // disk numbers
         writeCounted(ZERO);
         writeCounted(ZERO);
 
-        // number of entries
-        final int numberOfEntries = entries.size();
         if (numberOfEntries > ZIP64_MAGIC_SHORT
             && zip64Mode == Zip64Mode.Never) {
             throw new Zip64RequiredException(Zip64RequiredException
-                                             .TOO_MANY_ENTRIES_MESSAGE);
+                .TOO_MANY_ENTRIES_MESSAGE);
         }
         if (cdOffset > ZIP64_MAGIC && zip64Mode == Zip64Mode.Never) {
             throw new Zip64RequiredException(Zip64RequiredException
-                                             .ARCHIVE_TOO_BIG_MESSAGE);
+                .ARCHIVE_TOO_BIG_MESSAGE);
         }
 
-        final byte[] num = ZipShort.getBytes(Math.min(numberOfEntries,
-                                                ZIP64_MAGIC_SHORT));
+        byte[] num = ZipShort.getBytes(Math.min(numberOfEntries,
+            ZIP64_MAGIC_SHORT));
         writeCounted(num);
         writeCounted(num);
 
@@ -1374,8 +1373,8 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
         writeCounted(ZipLong.getBytes(Math.min(cdOffset, ZIP64_MAGIC)));
 
         // ZIP file comment
-        final ByteBuffer data = this.zipEncoding.encode(comment);
-        final int dataLen = data.limit() - data.position();
+        ByteBuffer data = this.zipEncoding.encode(comment);
+        int dataLen = data.limit() - data.position();
         writeCounted(ZipShort.getBytes(dataLen));
         streamCompressor.writeCounted(data.array(), data.arrayOffset(), dataLen);
     }
