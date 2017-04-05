@@ -1355,16 +1355,13 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
 
         if (numberOfEntries > ZIP64_MAGIC_SHORT
             && zip64Mode == Zip64Mode.Never) {
-            throw new Zip64RequiredException(Zip64RequiredException
-                .TOO_MANY_ENTRIES_MESSAGE);
+            throw new Zip64RequiredException(Zip64RequiredException.TOO_MANY_ENTRIES_MESSAGE);
         }
         if (cdOffset > ZIP64_MAGIC && zip64Mode == Zip64Mode.Never) {
-            throw new Zip64RequiredException(Zip64RequiredException
-                .ARCHIVE_TOO_BIG_MESSAGE);
+            throw new Zip64RequiredException(Zip64RequiredException.ARCHIVE_TOO_BIG_MESSAGE);
         }
 
-        byte[] num = ZipShort.getBytes(Math.min(numberOfEntries,
-            ZIP64_MAGIC_SHORT));
+        byte[] num = ZipShort.getBytes(Math.min(numberOfEntries, ZIP64_MAGIC_SHORT));
         writeCounted(num);
         writeCounted(num);
 
@@ -1373,8 +1370,8 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
         writeCounted(ZipLong.getBytes(Math.min(cdOffset, ZIP64_MAGIC)));
 
         // ZIP file comment
-        ByteBuffer data = this.zipEncoding.encode(comment);
-        int dataLen = data.limit() - data.position();
+        final ByteBuffer data = this.zipEncoding.encode(comment);
+        final int dataLen = data.limit() - data.position();
         writeCounted(ZipShort.getBytes(dataLen));
         streamCompressor.writeCounted(data.array(), data.arrayOffset(), dataLen);
     }
